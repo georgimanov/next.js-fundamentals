@@ -42,3 +42,27 @@ export const getCurrentUser = async () => {
     
     return '';
 }
+
+export const getIssuesForCurrentUser = async () => {
+    await mockDelay(500) // Simulate a delay for demonstration purposes
+    const session = await getSession();
+    if (!session) return []
+
+    try {
+        const issuesList = await db
+        .query
+        .issues
+        .findMany({
+            with: {
+                user: true
+            },
+            orderBy: (issues, { desc }) => [desc(issues.createdAt)]
+        })
+        
+        return issuesList
+        
+    } catch (error) {
+        console.error('Error fetching issues for current user:', error)
+        throw new Error('Failed to fetch issues for current user')
+    }
+}
