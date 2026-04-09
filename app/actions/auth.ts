@@ -124,6 +124,7 @@ export const signUp = async (formData: FormData) => {
       }
     }
 
+    console.log(data);
     const user = await createUser(data.email, data.password)
 
     if (!user) {

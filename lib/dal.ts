@@ -7,12 +7,12 @@ import { mockDelay } from './utils'
 
 export const getUserByEmail = async (email: string) => {
     try {
-        const users = await db
+        const result = await db
         .select()
         .from(users)
         .where(eq(users.email, email))
         
-        return users[0] || null
+        return result[0] || null
         
     } catch (error) {
         console.error('Error fetching user by email:', error)
@@ -28,12 +28,12 @@ export const getCurrentUser = async () => {
     if (!session) return null
 
     try {
-        const users = await db
+        const result = await db
         .select()
         .from(users)
         .where(eq(users.id, session.userId))
         
-        return users[0] || null
+        return result[0] || null
         
     } catch (error) {
         console.error('Error fetching user by email:', error)
