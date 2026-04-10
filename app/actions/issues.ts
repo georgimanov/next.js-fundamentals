@@ -6,6 +6,7 @@ import { eq } from 'drizzle-orm'
 import { getCurrentUser } from '@/lib/dal'
 import { z } from 'zod'
 import { mockDelay } from '@/lib/utils'
+import { revalidateTag } from 'next/cache'
 
 // Define Zod schema for issue validation
 const IssueSchema = z.object({
@@ -36,6 +37,7 @@ export type ActionResponse = {
 }
 
 export const createIssue = async (data: IssueData) => {
+
   try {
     // Security check - ensure user is authenticated
     const user = await getCurrentUser()
@@ -67,6 +69,8 @@ export const createIssue = async (data: IssueData) => {
       userId: validatedData.userId,
     })
 
+    revalidateTag('issues') // Invalidate cache for issues list
+    
     return { success: true, message: 'Issue created successfully' }
   } catch (error) {
     console.error('Error creating issue:', error)
@@ -78,10 +82,85 @@ export const createIssue = async (data: IssueData) => {
   }
 }
 
-export const updateIssue = async (issueId: number, data: IssueData) => {
-  return {
-    success: false,
-    message: 'Update issue functionality not implemented yet',
-    error: 'Not implemented',
+export async function updateIssue(issueId: number, data: Partial<IssueData>):
+ Promise<ActionResponse> {
+  await mockDelay(1000) // Simulate network delay
+
+  try {
+    // Security check - ensure user is authenticated
+    const user = await getCurrentUser()
+    if (!user) {
+      return {
+        success: false,
+        message: 'Unauthorized access',
+        error: 'Unauthorized',
+      }
+    }
+
+    // Validate with Zod (partial validation for updates)
+    const UpdateIssueSchema = IssueSchema.partial()
+    const validationResult = UpdateIssueSchema.safeParse(data)
+    if (!validationResult.success) {
+      return {
+        success: false,
+        message: 'Validation failed',
+        errors: validationResult.error.flatten().fieldErrors,
+      }
+    }
+
+    // Update issue with validated data
+    const validatedData = validationResult.data
+
+    const updateData: Partial<IssueData> = {}
+    if (validatedData.title) updateData.title = validatedData.title
+    if (validatedData.description !== undefined)
+      updateData.description = validatedData.description
+    if (validatedData.status) updateData.status = validatedData.status
+    if (validatedData.priority) updateData.priority = validatedData.priority  
+
+    await db
+      .update(issues)
+      .set(updateData)
+      .where(eq(issues.id, issueId))
+  
+      revalidateTag('issues') // Invalidate cache for issues list
+
+    return { success: true, message: 'Issue updated successfully' }
+
+  } catch (error) {
+    console.error('Error updating issue:', error)
+    return {
+      success: false,
+      message: 'An error occurred while updating the issue',
+      error: 'Failed to update issue',
+    }
+  }
+}
+
+export async function deleteIssue(issueId: number): Promise<ActionResponse> {
+  await mockDelay(1000) // Simulate network delay
+
+  try {
+    // Security check - ensure user is authenticated
+    const user = await getCurrentUser()
+    if (!user) {
+      return {
+        success: false,
+        message: 'Unauthorized access',
+        error: 'Unauthorized',
+      }
+    }
+
+    await db.delete(issues).where(eq(issues.id, issueId))
+    revalidateTag('issues') // Invalidate cache for issues list
+
+    return { success: true, message: 'Issue deleted successfully' }
+  } catch (error) {
+    console.error('Error deleting issue:', error)
+    return {
+      success: false,
+      message: 'An error occurred while deleting the issue',
+      error: 'Failed to delete issue',
+    }
   }
 }
